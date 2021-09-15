@@ -1,0 +1,48 @@
+schema {
+    query : Query
+    mutation: Mutation
+}
+
+type Query {
+    persons: [PersonEntity]
+    personsPage(first: Int, after: String): UserConnection @connection(for: "PersonEntity")
+    person(id: ID!): PersonEntity
+    companies: [CompanyEntity]
+    company(id: ID!): CompanyEntity
+}
+
+type Mutation {
+    createPerson(person: createPersonInput): PersonEntity
+    createCompany(company: createCompanyInput): CompanyEntity
+}
+
+input createPersonInput {
+    name: String
+    companyId: String
+}
+
+input createCompanyInput {
+    name: String
+    partnerCompanyIds: String
+}
+
+interface Node {
+    id: ID!
+}
+
+type CompanyEntity implements Node {
+    id: ID!
+    name: String
+    partnerCompanyIds: String
+    persons: [PersonEntity]
+    partners: [CompanyEntity]
+}
+
+type PersonEntity implements Node {
+    id: ID!
+    name: String
+    companyId: String
+    company: CompanyEntity
+}
+
+
