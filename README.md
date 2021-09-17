@@ -1,32 +1,23 @@
 ## SpringBoot GraphQL Demo
 
 > 参考资料  
-> [graphql-java][graphql-java]  
-> [graphql-java-kickstart][graphql-java-kickstart]  
+> [Graphql-Java][Graphql-Java]  
+> [Graphql-Java-Kickstart][Graphql-Java-Kickstart]  
 > [GraphQL 在微服务架构中的实践][GraphQL 在微服务架构中的实践]  
-> [GraphQL Java从入门到实践][GraphQL Java从入门到实践]
+> [GraphQL Java从入门到实践][GraphQL Java从入门到实践]  
+> [Building a GraphQL Server with Spring Boot][Building a GraphQL Server with Spring Boot]
 
-[graphql-java]:www.graphql-java.com
-[graphql-java-kickstart]:www.graphql-java-kickstart.com
+[Graphql-Java]:www.graphql-java.com
+[Graphql-Java-Kickstart]:www.graphql-java-kickstart.com
 [GraphQL 在微服务架构中的实践]:https://draveness.me/graphql-microservice/
 [GraphQL Java从入门到实践]:https://www.jianshu.com/p/4ede220b713e
+[Building a GraphQL Server with Spring Boot]:https://www.pluralsight.com/guides/building-a-graphql-server-with-spring-boot
 
 ### [GraphQL-Java预览]
 
 [GraphQL-java预览]:https://www.graphql-java.com/documentation/v16/getting-started/
 
 ```
-import graphql.ExecutionResult;
-import graphql.GraphQL;
-import graphql.schema.GraphQLSchema;
-import graphql.schema.StaticDataFetcher;
-import graphql.schema.idl.RuntimeWiring;
-import graphql.schema.idl.SchemaGenerator;
-import graphql.schema.idl.SchemaParser;
-import graphql.schema.idl.TypeDefinitionRegistry;
-
-import static graphql.schema.idl.RuntimeWiring.newRuntimeWiring;
-
 public class HelloWorld {
 
     public static void main(String[] args) {
@@ -175,11 +166,190 @@ type PersonEntity implements Node {
 }
 ```
 
-#### [定义Resolver]和数据类
+#### 3. [定义Resolver]和数据类
 
 [定义Resolver]:https://www.graphql-java-kickstart.com/tools/schema-definition/
 
-GraphQL Java tools会自动将schema定义的对象映射到java对象的方法和属性上。因此只需在对应的Resolver中实现Query和Mutation中相关的方法提供数据即可。
+接下来需在对应的Resolver中实现具体的方法。graphql会根据pojo规范自动的将对象与schema对象映射
+
+例如: 
+
+* schema中`persons: [PersonEntity]`方法，该方法无参数，返回`PersonEntity数组`, 则在`GraphQLQueryResolver`中实现persons方法。
+
+```
+@Component
+public class PersonQueryResolver implements GraphQLQueryResolver {
+
+  @Autowired
+  private PersonService personService;
+
+  public List<PersonEntity> persons() {
+    return personService.all();
+  }
+
+  ...
+
+}
+```
+
+* schema中`company(id: ID!): CompanyEntity`方法，该方法需要一个`id`参数，返回`CompanyEntity`, 则在`GraphQLQueryResolver`中实现persons方法。
+
+```
+@Component
+public class CompanyQueryResolver implements GraphQLQueryResolver {
+
+  @Autowired
+  private CompanyService companyService;
+
+  public CompanyEntity company(String id) {
+    return companyService.findById(id);
+  }
+  
+  ...
+
+}
+```
+
+往往在实际业务中，我们常常会遇到有关联的数据。
+
+例如: 实例中的`公司company`和`员工person`. 
+
+* 一个`公司`会有多个`员工`
+* 一个`员工`只能在一家`公司`工作
+* 一个`公司`可能存在多个`合作公司`
+
+此时我们的这种 数据关系 可以在schame中定义(java实体中不需要定义此字段)，在 `GraphQLResolver<T>` 中添加实现即可
+
+例如：一个`公司`可能存在多个`合作公司`场景
+
+```
+@Data
+@Proxy(lazy = false)
+@Entity
+public class CompanyEntity {
+
+  @Id
+  private String id;
+
+  private String name;
+
+  private String partnerCompanyIds;
+
+  public CompanyEntity(){}
+
+  public CompanyEntity(String id, String name, String partnerCompanyIds){
+    this.id = id;
+    this.name = name;
+    this.partnerCompanyIds = partnerCompanyIds;
+  }
+}
+```
+
+```
+@Component
+public class CompanyResolver implements GraphQLResolver<CompanyEntity> {
+
+  @Autowired
+  private CompanyService companyService;
+
+  public List<CompanyEntity> partners(CompanyEntity company,
+      DataFetchingEnvironment environment) {
+    String[] partnerIds = company.getPartnerCompanyIds().split("\\|");
+    return companyService.findByIds(partnerIds);
+  }
+  
+  ...
+
+}
+```
+
+在关联对象中会存在`N+1`问题，该问题graph提供了`BatchLoader`批量加载数据方式解决。当获取到所有带查询的关联数据后，在进行一次查询。
+
+例如: 一个`公司`会有多个`员工`
+
+* 首先需要定义需要在请求上下文中定义`personCompanyIdLoader`
+
+```
+@Component
+public class CustomGraphQLContextBuilder implements GraphQLServletContextBuilder {
+
+  @Autowired
+  private CompanyService companyService;
+
+  @Autowired
+  private PersonService personService;
+
+  @Override
+  public GraphQLContext build(HttpServletRequest httpServletRequest,
+      HttpServletResponse httpServletResponse) {
+    return DefaultGraphQLServletContext
+        .createServletContext(buildDataLoaderRegistry(), null)
+        .with(httpServletRequest)
+        .with(httpServletResponse)
+        .build();
+  }
+
+  @Override
+  public GraphQLContext build(Session session, HandshakeRequest handshakeRequest) {
+    return DefaultGraphQLWebSocketContext
+        .createWebSocketContext(buildDataLoaderRegistry(), null)
+        .with(session)
+        .with(handshakeRequest)
+        .build();
+  }
+
+  @Override
+  public GraphQLContext build() {
+    return new DefaultGraphQLContext(buildDataLoaderRegistry(), null);
+  }
+
+  private DataLoaderRegistry buildDataLoaderRegistry() {
+
+    //companyService.findByIds(companyIds)返回数据的顺序，需要和参数顺序一致
+    DataLoader<String, CompanyEntity> companyIdLoader =
+        new DataLoader<>(companyIds -> CompletableFuture
+            .supplyAsync(() -> companyService.findByIds(companyIds)));
+
+    DataLoader<String, List<PersonEntity>> personCompanyIdLoader =
+        new DataLoader<>(
+            keys -> CompletableFuture.supplyAsync(() -> personService.findByCompanyIds(keys)));
+
+    DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
+    dataLoaderRegistry.register("companyIdLoader", companyIdLoader);
+    dataLoaderRegistry.register("personCompanyIdLoader", personCompanyIdLoader);
+    return dataLoaderRegistry;
+  }
+
+}
+```
+
+* 在GraphQLResolver中获取`personCompanyIdLoader`并查询数据
+
+```
+@Component
+public class CompanyResolver implements GraphQLResolver<CompanyEntity> {
+
+  @Autowired
+  private CompanyService companyService;
+
+  public CompletableFuture<List<PersonEntity>> persons(CompanyEntity company,
+      DataFetchingEnvironment environment) {
+    DataLoaderRegistry registry = ((GraphQLContext) environment.getContext())
+        .getDataLoaderRegistry();
+    DataLoader<String, List<PersonEntity>> dataLoader = registry.getDataLoader("personCompanyIdLoader");
+    if (dataLoader != null) {
+      return dataLoader.load(company.getId());
+    }
+    throw new IllegalStateException("No customer data loader found");
+  }
+
+  ...
+
+}
+```
+
+
+
 
 
 
