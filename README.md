@@ -361,7 +361,7 @@ public class CompanyResolver implements GraphQLResolver<CompanyEntity> {
     </dependency>
 ```
 
-![voyager.png](https://raw.githubusercontent.com/Loading-Life/spring-graphql-demo/edit/master/resource/voyager.png)
+![voyager.png](https://raw.githubusercontent.com/Loading-Life/spring-graphql-demo/master/resource/voyager.png)
 
 
 
