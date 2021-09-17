@@ -345,7 +345,7 @@ public class CompanyResolver implements GraphQLResolver<CompanyEntity> {
       <version>${graphql.version}</version>
     </dependency>
 ```
-![graphiql.png](https://github.com/Loading-Life/spring-graphql-demo/edit/master/resource/graphiql.png)
+![graphiql.png](https://raw.githubusercontent.com/Loading-Life/spring-graphql-demo/master/resource/graphiql.png)
 
 ### 调试工具Voyager
 
@@ -361,7 +361,7 @@ public class CompanyResolver implements GraphQLResolver<CompanyEntity> {
     </dependency>
 ```
 
-![voyager.png](https://github.com/Loading-Life/spring-graphql-demo/edit/master/resource/voyager.png)
+![voyager.png](https://raw.githubusercontent.com/Loading-Life/spring-graphql-demo/edit/master/resource/voyager.png)
 
 
 
