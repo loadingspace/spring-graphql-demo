@@ -1,5 +1,7 @@
 ## SpringBoot GraphQL Demo
 
+代码示例：https://github.com/Loading-Life/spring-graphql-demo
+
 > 参考资料  
 > [Graphql-Java][Graphql-Java]  
 > [Graphql-Java-Kickstart][Graphql-Java-Kickstart]  
@@ -72,23 +74,6 @@ public class HelloWorld {
       <artifactId>graphql-spring-boot-starter-test</artifactId>
       <version>${graphql.version}</version>
     </dependency>
-    
-    <!-- 查询调试工具(可选) -->
-    <!-- https://github.com/graphql/graphiql -->
-    <dependency>
-      <groupId>com.graphql-java-kickstart</groupId>
-      <artifactId>graphiql-spring-boot-starter</artifactId>
-      <version>${graphql.version}</version>
-    </dependency>
-    
-    <!-- graphql资源图形展示工具(可选) -->
-    <!-- https://github.com/APIs-guru/graphql-voyager -->
-    <dependency>
-      <groupId>com.graphql-java-kickstart</groupId>
-      <artifactId>voyager-spring-boot-starter</artifactId>
-      <version>${graphql.version}</version>
-    </dependency>
-    
 ```
 
 #### 2. [定义schema]
@@ -347,6 +332,39 @@ public class CompanyResolver implements GraphQLResolver<CompanyEntity> {
 
 }
 ```
+### 调试工具GraphIQL
+
+添加依赖后，访问`${address}/graphiql`
+
+```
+    <!-- 查询调试工具(可选) -->
+    <!-- https://github.com/graphql/graphiql -->
+    <dependency>
+      <groupId>com.graphql-java-kickstart</groupId>
+      <artifactId>graphiql-spring-boot-starter</artifactId>
+      <version>${graphql.version}</version>
+    </dependency>
+```
+![graphiql.png](https://github.com/Loading-Life/spring-graphql-demo/edit/master/resource/graphiql.png)
+
+### 调试工具Voyager
+
+添加依赖后，访问`${address}/voyager`
+
+```
+    <!-- graphql资源图形展示工具(可选) -->
+    <!-- https://github.com/APIs-guru/graphql-voyager -->
+    <dependency>
+      <groupId>com.graphql-java-kickstart</groupId>
+      <artifactId>voyager-spring-boot-starter</artifactId>
+      <version>${graphql.version}</version>
+    </dependency>
+```
+
+![voyager.png](https://github.com/Loading-Life/spring-graphql-demo/edit/master/resource/voyager.png)
+
+
+
 
 
 
